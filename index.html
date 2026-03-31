@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Catálogo de Publicaciones</title>
+    <title>Biblioteca Digital</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -21,11 +21,10 @@
 <body class="p-4 md:p-8">
 
     <header class="max-w-[90%] mx-auto text-center mb-6 border-b border-white/10 pb-4">
-        <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white uppercase tracking-tight">Biblioteca Digital</h1>
+        <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white uppercase tracking-tight">Catálogo de Publicaciones</h1>
     </header>
 
     <main class="max-w-[90%] mx-auto">
-        
         <section class="mb-8" id="sec-destacada">
             <div class="section-header group" onclick="toggleSection('content-destacada')">
                 <div class="accent-line w-2 h-6 mr-4 rounded-full shadow-[0_0_10px_rgba(255,215,0,0.5)]"></div>
@@ -72,11 +71,6 @@
     </main>
 
     <script>
-        // --- CONFIGURACIÓN DE GOOGLE SHEETS ---
-        // Pega aquí el ID de tu hoja de cálculo (debe ser pública)
-        const SHEET_ID = '15RNq4EqnmyfRF4Fob1qkjqewGNViSi-u3merbRWWjCA'; 
-        const SHEET_NAME = 'Hoja 1'; // El nombre exacto de la pestaña abajo en tu Excel
-
         const trackFilas = { "grid-destacada": 1, "grid-ciencia": 1, "grid-otras": 1, "grid-externas": 1 };
 
         function toggleSection(id) {
@@ -138,84 +132,53 @@
             }
         }
 
-        async function fetchGoogleSheetsData() {
-            const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}`;
-            try {
-                const response = await fetch(url);
-                const text = await response.text();
-                // Google Sheets devuelve el JSON envuelto en una función, extraemos solo el JSON
-                const jsonString = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
-                const jsonData = JSON.parse(jsonString);
-                
-                let data = { destacada: [], ciencia: [], otras: [], externas: [] };
-
-                // Omitir la fila 0 si son los encabezados
-                jsonData.table.rows.forEach(row => {
-                    if (!row.c[0] || !row.c[0].v) return; // Saltar filas vacías
-                    
-                    let pub = {
-                        titulo: row.c[0] ? row.c[0].v : '',
-                        autor: row.c[1] ? row.c[1].v : '',
-                        categoria: row.c[2] ? row.c[2].v : '',
-                        imagen: row.c[3] ? row.c[3].v : '',
-                        url: row.c[4] ? row.c[4].v : '#',
-                        fecha: row.c[5] ? row.c[5].v : ''
-                    };
-
-                    // Clasificar por categoría
-                    if(pub.categoria.includes('Destacada')) data.destacada.push(pub);
-                    else if(pub.categoria.includes('Ciencia')) data.ciencia.push(pub);
-                    else if(pub.categoria.includes('Externas')) data.externas.push(pub);
-                    else data.otras.push(pub);
-                });
-
-                return data;
-            } catch (error) {
-                console.error("Error cargando Google Sheets:", error);
-                return { destacada: [], ciencia: [], otras: [], externas: [] };
-            }
-        }
-
         async function init() {
-            const data = await fetchGoogleSheetsData();
-            
-            const render = (containerId, list, isPortrait) => {
-                const grid = document.getElementById(containerId);
-                if(!list || list.length === 0) {
-                    grid.parentElement.parentElement.style.display = 'none';
-                    return;
-                }
-                list.forEach(p => {
-                    grid.innerHTML += `
-                        <div class="card-pub rounded-xl overflow-hidden shadow-lg">
-                            <a href="${p.url}" target="_blank" class="block relative ${isPortrait ? 'aspect-[2/3]' : 'aspect-video'} bg-gray-900 group">
-                                <img src="${p.imagen}" alt="Portada" class="absolute w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity">
-                            </a>
-                            <div class="p-4 flex-grow flex flex-col">
-                                <p class="text-[10px] font-bold text-yellow-400 uppercase mb-1 tracking-wider">${p.autor}</p>
-                                <a href="${p.url}" target="_blank" class="hover:text-yellow-400">
-                                    <h3 class="text-sm font-semibold leading-tight line-clamp-2 mb-2">${p.titulo}</h3>
+            try {
+                // Leemos el nuevo archivo publicaciones.json
+                const response = await fetch('publicaciones.json?v=' + new Date().getTime());
+                const data = await response.json();
+                
+                const render = (containerId, list, isPortrait) => {
+                    const grid = document.getElementById(containerId);
+                    if(!list || list.length === 0) {
+                        grid.parentElement.parentElement.style.display = 'none';
+                        return;
+                    }
+                    list.forEach(p => {
+                        // Cambiamos la lógica de iframe por un enlace <a> hacia la publicación
+                        grid.innerHTML += `
+                            <div class="card-pub rounded-xl overflow-hidden shadow-lg">
+                                <a href="${p.url}" target="_blank" class="block relative ${isPortrait ? 'aspect-[2/3]' : 'aspect-video'} bg-gray-900 group">
+                                    <img src="${p.imagen}" alt="Portada" class="absolute w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity">
+                                    <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
+                                        <div class="px-4 py-2 bg-[#ffd700] text-black font-bold rounded-full text-xs">Leer Publicación</div>
+                                    </div>
                                 </a>
-                                <p class="text-[10px] text-blue-200 mt-auto border-t border-white/5 pt-2">${p.fecha}</p>
-                            </div>
-                        </div>`;
-                });
-            };
+                                <div class="p-4 flex-grow flex flex-col">
+                                    <p class="text-[10px] font-bold text-yellow-400 uppercase mb-1 tracking-wider line-clamp-1">${p.autor}</p>
+                                    <a href="${p.url}" target="_blank" class="hover:text-yellow-400">
+                                        <h3 class="text-sm font-semibold leading-tight line-clamp-2 mb-2">${p.titulo}</h3>
+                                    </a>
+                                    <p class="text-[10px] text-blue-200 mt-auto border-t border-white/5 pt-2">${p.fecha}</p>
+                                </div>
+                            </div>`;
+                    });
+                };
 
-            // La sección destacada usa formato horizontal, las demás tipo póster vertical (Libro)
-            render('grid-destacada', data.destacada, false);
-            render('grid-ciencia', data.ciencia, true);
-            render('grid-otras', data.otras, true);
-            render('grid-externas', data.externas, true);
+                // Formato horizontal para destacadas, vertical (póster) para las demás
+                render('grid-destacada', data.destacada, false);
+                render('grid-ciencia', data.ciencia, true);
+                render('grid-otras', data.otras, true);
+                render('grid-externas', data.externas, true);
 
-            setTimeout(() => { 
-                ['grid-destacada', 'grid-ciencia', 'grid-otras', 'grid-externas'].forEach(id => {
-                    const grid = document.getElementById(id);
-                    if(grid.innerHTML !== "") ajustarCorteLimpio(grid);
-                });
-            }, 600);
+                setTimeout(() => { 
+                    ['grid-destacada', 'grid-ciencia', 'grid-otras', 'grid-externas'].forEach(id => {
+                        const grid = document.getElementById(id);
+                        if(grid.innerHTML !== "") ajustarCorteLimpio(grid);
+                    });
+                }, 600);
+            } catch (e) { console.error("Error cargando publicaciones.json:", e); }
         }
-        
         init();
     </script>
 </body>
