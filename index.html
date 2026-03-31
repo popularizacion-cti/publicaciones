@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo de Publicaciones</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; background-color: #1e6c93; color: white; margin: 0; padding: 0; scroll-behavior: smooth; }
+        .accent-line { background-color: #ffd700; } 
+        .card-pub { background-color: rgba(255, 255, 255, 0.08); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.15); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); height: 100%; display: flex; flex-direction: column; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .card-pub:hover { background-color: rgba(255, 255, 255, 0.12); transform: translateY(-8px); border-color: #ffd700; box-shadow: 0 0 20px rgba(255, 215, 0, 0.3); }
+        
+        .grid-limited { overflow: hidden; transition: max-height 0.7s ease-in-out; max-height: 0; padding-top: 0.8rem; }
+        .btn-toggle { cursor: pointer; color: #ffd700; font-weight: 600; text-decoration: underline; margin-top: 15px; display: inline-block; background: none; border: none; font-size: 0.95rem; }
+        .section-header { cursor: pointer; user-select: none; display: flex; align-items: center; padding: 10px 0; }
+        .section-header:hover h2 { color: #ffd700; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <header class="max-w-[90%] mx-auto text-center mb-6 border-b border-white/10 pb-4">
+        <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white uppercase tracking-tight">Biblioteca Digital</h1>
+    </header>
+
+    <main class="max-w-[90%] mx-auto">
+        
+        <section class="mb-8" id="sec-destacada">
+            <div class="section-header group" onclick="toggleSection('content-destacada')">
+                <div class="accent-line w-2 h-6 mr-4 rounded-full shadow-[0_0_10px_rgba(255,215,0,0.5)]"></div>
+                <h2 class="text-lg font-bold tracking-wide transition-colors">Publicación Destacada</h2>
+            </div>
+            <div id="content-destacada" class="section-content">
+                <div id="grid-destacada" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 grid-limited"></div>
+                <button id="btn-more-destacada" class="btn-toggle" onclick="expandGrid('grid-destacada', this)">Ver más destacadas</button>
+            </div>
+        </section>
+
+        <section class="mb-8" id="sec-ciencia">
+            <div class="section-header group" onclick="toggleSection('content-ciencia')">
+                <div class="w-2 h-6 mr-4 rounded-full bg-orange-500 shadow-[0_0_10px_rgba(255,165,0,0.5)]"></div>
+                <h2 class="text-lg font-bold tracking-wide transition-colors">Revista Libros y Ciencia</h2>
+            </div>
+            <div id="content-ciencia" class="section-content">
+                <div id="grid-ciencia" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 grid-limited"></div>
+                <button id="btn-more-ciencia" class="btn-toggle" onclick="expandGrid('grid-ciencia', this)">Ver más revistas</button>
+            </div>
+        </section>
+
+        <section class="mb-8" id="sec-otras">
+            <div class="section-header group" onclick="toggleSection('content-otras')">
+                <div class="w-2 h-6 mr-4 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.3)]"></div>
+                <h2 class="text-lg font-bold tracking-wide transition-colors">Otras Publicaciones</h2>
+            </div>
+            <div id="content-otras" class="section-content">
+                <div id="grid-otras" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 grid-limited"></div>
+                <button id="btn-more-otras" class="btn-toggle" onclick="expandGrid('grid-otras', this)">Ver más publicaciones</button>
+            </div>
+        </section>
+
+        <section class="mb-8" id="sec-externas">
+            <div class="section-header group" onclick="toggleSection('content-externas')">
+                <div class="w-2 h-6 mr-4 rounded-full bg-blue-300 shadow-[0_0_10px_rgba(147,197,253,0.5)]"></div>
+                <h2 class="text-lg font-bold tracking-wide transition-colors">Publicaciones Externas</h2>
+            </div>
+            <div id="content-externas" class="section-content">
+                <div id="grid-externas" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 grid-limited"></div>
+                <button id="btn-more-externas" class="btn-toggle" onclick="expandGrid('grid-externas', this)">Ver más externas</button>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // --- CONFIGURACIÓN DE GOOGLE SHEETS ---
+        // Pega aquí el ID de tu hoja de cálculo (debe ser pública)
+        const SHEET_ID = 'TU_ID_DE_GOOGLE_SHEET_AQUI'; 
+        const SHEET_NAME = 'Hoja 1'; // El nombre exacto de la pestaña abajo en tu Excel
+
+        const trackFilas = { "grid-destacada": 1, "grid-ciencia": 1, "grid-otras": 1, "grid-externas": 1 };
+
+        function toggleSection(id) {
+            const content = document.getElementById(id);
+            const btn = document.getElementById('btn-more-' + id.replace('content-', ''));
+            
+            if (content.style.display === "none") {
+                content.style.display = "block";
+                if(btn) btn.style.visibility = "visible";
+                const grid = content.querySelector('.grid-limited');
+                ajustarCorteLimpio(grid);
+            } else {
+                content.style.display = "none";
+                if(btn) btn.style.visibility = "hidden";
+            }
+        }
+
+        function expandGrid(gridId, btn) {
+            const grid = document.getElementById(gridId);
+            const isDestacada = gridId === 'grid-destacada';
+            
+            if (btn.innerText === "Ocultar") {
+                trackFilas[gridId] = 1;
+                ajustarCorteLimpio(grid);
+                btn.innerText = "Ver más";
+                window.scrollTo({ top: grid.parentElement.parentElement.offsetTop - 50, behavior: 'smooth' });
+                return;
+            }
+
+            const items = grid.children;
+            const columns = window.innerWidth >= 1024 ? (isDestacada ? 3 : 6) : (window.innerWidth >= 768 ? (isDestacada ? 2 : 4) : (isDestacada ? 1 : 2));
+            const totalFilas = Math.ceil(items.length / columns);
+            
+            trackFilas[gridId] += 1;
+            
+            if (trackFilas[gridId] >= totalFilas) {
+                grid.style.maxHeight = "none";
+                btn.innerText = "Ocultar";
+            } else {
+                const indiceTarget = columns * trackFilas[gridId];
+                if(items[indiceTarget]) {
+                    grid.style.maxHeight = (items[indiceTarget].offsetTop - grid.offsetTop - 20) + "px";
+                }
+            }
+        }
+
+        function ajustarCorteLimpio(grid) {
+            const isDestacada = grid.id === 'grid-destacada';
+            const items = grid.children;
+            const columns = window.innerWidth >= 1024 ? (isDestacada ? 3 : 6) : (window.innerWidth >= 768 ? (isDestacada ? 2 : 4) : (isDestacada ? 1 : 2));
+            const filasInicales = 1;
+
+            if (items.length > columns * filasInicales) {
+                grid.style.maxHeight = (items[columns * filasInicales].offsetTop - grid.offsetTop - 18) + "px";
+            } else {
+                grid.style.maxHeight = "none";
+                const btn = document.getElementById('btn-more-' + grid.id.replace('grid-', ''));
+                if(btn) btn.style.display = 'none';
+            }
+        }
+
+        async function fetchGoogleSheetsData() {
+            const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}`;
+            try {
+                const response = await fetch(url);
+                const text = await response.text();
+                // Google Sheets devuelve el JSON envuelto en una función, extraemos solo el JSON
+                const jsonString = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
+                const jsonData = JSON.parse(jsonString);
+                
+                let data = { destacada: [], ciencia: [], otras: [], externas: [] };
+
+                // Omitir la fila 0 si son los encabezados
+                jsonData.table.rows.forEach(row => {
+                    if (!row.c[0] || !row.c[0].v) return; // Saltar filas vacías
+                    
+                    let pub = {
+                        titulo: row.c[0] ? row.c[0].v : '',
+                        autor: row.c[1] ? row.c[1].v : '',
+                        categoria: row.c[2] ? row.c[2].v : '',
+                        imagen: row.c[3] ? row.c[3].v : '',
+                        url: row.c[4] ? row.c[4].v : '#',
+                        fecha: row.c[5] ? row.c[5].v : ''
+                    };
+
+                    // Clasificar por categoría
+                    if(pub.categoria.includes('Destacada')) data.destacada.push(pub);
+                    else if(pub.categoria.includes('Ciencia')) data.ciencia.push(pub);
+                    else if(pub.categoria.includes('Externas')) data.externas.push(pub);
+                    else data.otras.push(pub);
+                });
+
+                return data;
+            } catch (error) {
+                console.error("Error cargando Google Sheets:", error);
+                return { destacada: [], ciencia: [], otras: [], externas: [] };
+            }
+        }
+
+        async function init() {
+            const data = await fetchGoogleSheetsData();
+            
+            const render = (containerId, list, isPortrait) => {
+                const grid = document.getElementById(containerId);
+                if(!list || list.length === 0) {
+                    grid.parentElement.parentElement.style.display = 'none';
+                    return;
+                }
+                list.forEach(p => {
+                    grid.innerHTML += `
+                        <div class="card-pub rounded-xl overflow-hidden shadow-lg">
+                            <a href="${p.url}" target="_blank" class="block relative ${isPortrait ? 'aspect-[2/3]' : 'aspect-video'} bg-gray-900 group">
+                                <img src="${p.imagen}" alt="Portada" class="absolute w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity">
+                            </a>
+                            <div class="p-4 flex-grow flex flex-col">
+                                <p class="text-[10px] font-bold text-yellow-400 uppercase mb-1 tracking-wider">${p.autor}</p>
+                                <a href="${p.url}" target="_blank" class="hover:text-yellow-400">
+                                    <h3 class="text-sm font-semibold leading-tight line-clamp-2 mb-2">${p.titulo}</h3>
+                                </a>
+                                <p class="text-[10px] text-blue-200 mt-auto border-t border-white/5 pt-2">${p.fecha}</p>
+                            </div>
+                        </div>`;
+                });
+            };
+
+            // La sección destacada usa formato horizontal, las demás tipo póster vertical (Libro)
+            render('grid-destacada', data.destacada, false);
+            render('grid-ciencia', data.ciencia, true);
+            render('grid-otras', data.otras, true);
+            render('grid-externas', data.externas, true);
+
+            setTimeout(() => { 
+                ['grid-destacada', 'grid-ciencia', 'grid-otras', 'grid-externas'].forEach(id => {
+                    const grid = document.getElementById(id);
+                    if(grid.innerHTML !== "") ajustarCorteLimpio(grid);
+                });
+            }, 600);
+        }
+        
+        init();
+    </script>
+</body>
+</html>
